@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +55,31 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define DBG_TX_TIMEOUT_MS   (100U)
+#define DBG_PRINT_PERIOD_MS (1000U)
 
+static void Dbg_PrintClocks(void)
+{
+    char buf[128];
+    uint32_t cfgr = RCC->CFGR;
+    uint32_t cr   = RCC->CR;
+
+    /* SWS: 0 = HSI, 1 = HSE, 2 = PLL */
+    uint32_t sws    = (cfgr & RCC_CFGR_SWS) >> RCC_CFGR_SWS_Pos;
+    /* PLLSRC: 0 = HSI/2, 1 = HSE */
+    uint32_t pllsrc = (cfgr & RCC_CFGR_PLLSRC) ? 1U : 0U;
+    uint32_t hsebyp = (cr & RCC_CR_HSEBYP) ? 1U : 0U;
+
+    int n = snprintf(buf, sizeof(buf),
+                     "sysclk=%lu hclk=%lu pclk1=%lu pclk2=%lu sws=%lu pllsrc=%lu hsebyp=%lu\r\n",
+                     HAL_RCC_GetSysClockFreq(), HAL_RCC_GetHCLKFreq(),
+                     HAL_RCC_GetPCLK1Freq(), HAL_RCC_GetPCLK2Freq(),
+                     sws, pllsrc, hsebyp);
+    if (n > 0)
+    {
+        HAL_UART_Transmit(&huart2, (uint8_t *)buf, (uint16_t)n, DBG_TX_TIMEOUT_MS);
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -89,7 +113,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  Dbg_PrintClocks();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,6 +123,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  {
+		  char buf[32];
+		  int n = snprintf(buf, sizeof(buf), "tick=%lu\r\n", HAL_GetTick());
+		  if (n > 0)
+		  {
+			  HAL_UART_Transmit(&huart2, (uint8_t *)buf, (uint16_t)n, DBG_TX_TIMEOUT_MS);
+		  }
+		  HAL_Delay(DBG_PRINT_PERIOD_MS);
+	  }
   }
   /* USER CODE END 3 */
 }
